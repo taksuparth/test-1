@@ -4,7 +4,7 @@ name: Sync Template
 on:
   # Run automatically every day at midnight
   schedule:
-    - cron: "0 0 * * *"
+    - cron: '0 0 * * *'
   # Allow manual runs from the Actions tab
   workflow_dispatch:
 
@@ -27,12 +27,12 @@ jobs:
         with:
           # REQUIRED: The path to your template repository.
           # The user of the template will not need to change this.
-          source_repo_path: "https://github.com/taksuparth/Autonomous-UI-App-Template"
+          source_repo_path: 'https://github.com/taksuparth/Autonomous-UI-App-Template'
 
           # REQUIRED for private templates: A token with permission to READ the template repo.
           # The user of the template must create this secret.
-          source_gh_token: ${{ secrets.TEMPLATE_SYNC_PAT }}
+          # source_gh_token: ${{ secrets.TEMPLATE_SYNC_PAT }}
 
           # OPTIONAL: The branch to sync from in the template repository.
           # Defaults to 'main'.
-          upstream_branch: "main"
+          upstream_branch: 'main'
