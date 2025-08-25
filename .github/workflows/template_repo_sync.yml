@@ -1,0 +1,24 @@
+jobs:
+  repo-sync:
+    runs-on: ubuntu-latest
+    # https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      # To use this repository's private action, you must check out the repository
+      - name: Checkout
+        # https://github.com/actions/checkout#usage
+        uses: actions/checkout@v4
+        with:
+          # submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: actions-template-sync
+        uses: AndreasAugustin/actions-template-sync@v2
+        with:
+          source_gh_token: ${{ secrets.GITHUB_TOKEN }}
+          source_repo_path: ${{ secrets.SOURCE_REPO_PATH }} # <owner/repo>, should be within secrets
+          upstream_branch: ${{ secrets.TARGET_BRANCH }} #<target_branch> # defaults to main
+          source_repo_ssh_private_key: ${{ secrets.SOURCE_REPO_SSH_PRIVATE_KEY }} # contains the private ssh key of the private repository
