@@ -27,7 +27,7 @@ jobs:
         with:
           # REQUIRED: The path to your template repository.
           # The user of the template will not need to change this.
-          source_repo_path: 'https://github.com/taksuparth/Autonomous-UI-App-Template'
+          source_repo_path: 'taksuparth/Autonomous-UI-App-Template'
 
           # REQUIRED for private templates: A token with permission to READ the template repo.
           # The user of the template must create this secret.
