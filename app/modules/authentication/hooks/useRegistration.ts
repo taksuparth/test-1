@@ -1,9 +1,9 @@
-import { useCallback } from 'react';
+import { useState } from 'react'; // Import useState
 import { zodResolver } from '@hookform/resolvers/zod';
-import { fetchWithCSRF } from '~/utils/fetchWithCSRF';
+import { useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router';
 import { z } from 'zod';
+import { axiosClient } from '@/lib/axios';
 
 const registerSchema = z
   .object({
@@ -19,8 +19,13 @@ const registerSchema = z
 
 type Inputs = z.infer<typeof registerSchema>;
 
+const registerUser = async (values: Omit<Inputs, 'confirmPassword'>) => {
+  const { data } = await axiosClient.post('/api/auth/register', values);
+  return data;
+};
+
 export function useRegistration() {
-  const navigate = useNavigate();
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const form = useForm<Inputs>({
     resolver: zodResolver(registerSchema),
@@ -33,35 +38,29 @@ export function useRegistration() {
     },
   });
 
-  const onSubmit = useCallback(
-    async (values: Inputs) => {
-      try {
-        const response = await fetchWithCSRF('/api/auth/register', {
-          method: 'POST',
-          body: JSON.stringify({
-            name: values.name,
-            email: values.email,
-            password: values.password,
-          }),
-        });
-
-        const res = await response.json();
-
-        if (!response.ok || res.error) {
-          throw new Error(res.statusMessage || 'An unknown error occurred.');
-        }
-
-        // On successful registration, navigate to the dashboard
-        navigate('/dashboard');
-      } catch (e: any) {
-        console.error('Registration failed:', e);
-        form.setError('root', {
-          message: e.message || 'Registration failed. Please try again.',
-        });
-      }
+  const {
+    mutate: performRegistration,
+    isPending,
+    error,
+  } = useMutation({
+    mutationFn: registerUser,
+    onSuccess: () => {
+      // 2. On success, update the state instead of navigating
+      setIsSuccess(true);
     },
-    [navigate, form],
-  );
+    onError: (err: any) => {
+      const errorMessage =
+        err.response?.data?.statusMessage ||
+        'Registration failed. Please try again.';
+      form.setError('root', { message: errorMessage });
+      console.error('Registration failed:', err);
+    },
+  });
 
-  return { form, onSubmit };
+  const onSubmit = (values: Inputs) => {
+    const { confirmPassword, ...registrationData } = values;
+    performRegistration(registrationData);
+  };
+
+  return { form, onSubmit, isPending, error, isSuccess };
 }

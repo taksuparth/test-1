@@ -1,4 +1,7 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { HydrationBoundary, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { useTheme } from 'next-themes';
 import type { LinksFunction, LoaderFunctionArgs } from 'react-router';
 import {
   Links,
@@ -7,9 +10,19 @@ import {
   Scripts,
   ScrollRestoration,
   useLoaderData,
+  useRouteError,
 } from 'react-router';
+import { createQueryClient } from '@/lib/query-client';
+import { useDehydratedState } from '@/hooks/use-dehydrated-state';
+import { Toaster } from '@/components/ui/sonner';
+import { ForbiddenError } from './components/atoms/errors/ForbiddenError';
+import { GeneralError } from './components/atoms/errors/GeneralError';
+import { MaintenanceError } from './components/atoms/errors/MaintainenceError';
+import { NotFoundError } from './components/atoms/errors/NotFoundError';
+import { UnauthorisedError } from './components/atoms/errors/UnauthorisedError';
 import { AuthLayout } from './components/layout/AuthLayout';
-import PageLayout from './components/layout/PageLayout';
+import ThemeProvider from './components/layout/themeToggle/ThemeProvider';
+import { ActiveThemeProvider } from './context/activeTheme';
 import tailwindCss from './tailwind.css?url';
 import { isAuthenticated } from './utils/checkAuthentication';
 
@@ -31,11 +44,20 @@ export const links: LinksFunction = () => [
 ];
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
-  const isUserAuthenticated = await isAuthenticated({ request });
-  return { isAuthenticated: isUserAuthenticated };
+  const queryClient = createQueryClient();
+
+  const isUserAuthenticated = await isAuthenticated({ request, queryClient });
+
+  return {
+    isAuthenticated: isUserAuthenticated,
+  };
 };
 
 export function Layout({ children }: { children: ReactNode }) {
+  const [queryClient] = useState(() => createQueryClient());
+
+  const dehydratedState = useDehydratedState();
+
   return (
     <html lang="en">
       <head>
@@ -45,22 +67,68 @@ export function Layout({ children }: { children: ReactNode }) {
         <Links />
       </head>
       <body>
-        {children}
-        <ScrollRestoration />
-        <Scripts />
+        <QueryClientProvider client={queryClient}>
+          <HydrationBoundary state={dehydratedState}>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+              enableColorScheme
+            >
+              {children}
+            </ThemeProvider>
+            <ScrollRestoration />
+            <Scripts />
+          </HydrationBoundary>
+          <ReactQueryDevtools initialIsOpen={false} />
+        </QueryClientProvider>
+        <Toaster />
       </body>
     </html>
   );
 }
 
+export function ErrorBoundary() {
+  const error = useRouteError() as { status: number };
+
+  if (error.status === 401) {
+    return <ForbiddenError />;
+  }
+
+  if (error.status === 403) {
+    return <UnauthorisedError />;
+  }
+
+  if (error.status === 404) {
+    return <NotFoundError />;
+  }
+
+  if (error.status === 500) {
+    return <GeneralError />;
+  }
+
+  if (error.status === 503) {
+    return <MaintenanceError />;
+  }
+
+  return null;
+}
+
 export default function App() {
   const { isAuthenticated } = useLoaderData<typeof loader>();
 
-  return isAuthenticated ? (
-    <Outlet />
-  ) : (
-    <AuthLayout>
-      <Outlet />
-    </AuthLayout>
+  const { resolvedTheme } = useTheme();
+
+  return (
+    <ActiveThemeProvider initialTheme={resolvedTheme}>
+      {isAuthenticated ? (
+        <Outlet />
+      ) : (
+        <AuthLayout>
+          <Outlet />
+        </AuthLayout>
+      )}
+    </ActiveThemeProvider>
   );
 }
