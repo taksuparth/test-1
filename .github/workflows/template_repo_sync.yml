@@ -1,24 +1,38 @@
+# .github/workflows/sync-template.yml
+
+name: Sync Template
+on:
+  # Run automatically every day at midnight
+  schedule:
+    - cron: "0 0 * * *"
+  # Allow manual runs from the Actions tab
+  workflow_dispatch:
+
 jobs:
   repo-sync:
     runs-on: ubuntu-latest
-    # https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs
+    # These permissions are required for the action to create a PR
     permissions:
       contents: write
       pull-requests: write
 
     steps:
-      # To use this repository's private action, you must check out the repository
+      # Step 1: Check out the current repository (the one created from the template)
       - name: Checkout
-        # https://github.com/actions/checkout#usage
         uses: actions/checkout@v4
-        with:
-          # submodules: true
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: actions-template-sync
+      # Step 2: Run the template sync action
+      - name: Sync with Template
         uses: AndreasAugustin/actions-template-sync@v2
         with:
-          source_gh_token: ${{ secrets.GITHUB_TOKEN }}
-          source_repo_path: ${{ secrets.SOURCE_REPO_PATH }} # <owner/repo>, should be within secrets
-          upstream_branch: ${{ secrets.TARGET_BRANCH }} #<target_branch> # defaults to main
-          source_repo_ssh_private_key: ${{ secrets.SOURCE_REPO_SSH_PRIVATE_KEY }} # contains the private ssh key of the private repository
+          # REQUIRED: The path to your template repository.
+          # The user of the template will not need to change this.
+          source_repo_path: "https://github.com/taksuparth/Autonomous-UI-App-Template"
+
+          # REQUIRED for private templates: A token with permission to READ the template repo.
+          # The user of the template must create this secret.
+          source_gh_token: ${{ secrets.TEMPLATE_SYNC_PAT }}
+
+          # OPTIONAL: The branch to sync from in the template repository.
+          # Defaults to 'main'.
+          upstream_branch: "main"
