@@ -1,15 +1,14 @@
 import PageLayout from '~/components/layout/PageLayout';
-import { checkAuthentication } from '~/utils/checkAuthentication';
-import { Outlet, type LoaderFunctionArgs } from 'react-router';
+import { authCheckLoader } from '~/utils/authCheckLoader';
+import { Outlet, useLoaderData } from 'react-router';
 
-export async function loader({ request }: LoaderFunctionArgs) {
-  const { user } = await checkAuthentication({ request });
-  return { user };
-}
+export { authCheckLoader as loader };
 
 export default function AuthAdminLayout() {
+  const { user } = useLoaderData();
+
   return (
-    <PageLayout>
+    <PageLayout user={user}>
       <Outlet />
     </PageLayout>
   );

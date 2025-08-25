@@ -1,8 +1,9 @@
-// 1. Import the custom hook
 import { useRegistration } from '~/modules/authentication/hooks/useRegistration';
+import { authPageLoader } from '~/utils/authCheckLoader';
 import { isAuthenticated } from '~/utils/checkAuthentication';
 import type { LoaderFunction, MetaFunction } from 'react-router';
 import { Link, redirect } from 'react-router';
+import { createQueryClient } from '@/lib/query-client';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -21,18 +22,26 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export const loader: LoaderFunction = async ({ request }) => {
-  const isUserAuthenticated = await isAuthenticated({ request });
-  if (isUserAuthenticated) {
-    return redirect('/dashboard');
-  }
-  return {};
-};
+export { authPageLoader as loader };
 
 export default function RegisterForm() {
-  const { form, onSubmit } = useRegistration();
+  const { form, onSubmit, isSuccess } = useRegistration();
   const { isSubmitting } = form.formState;
 
+  if (isSuccess) {
+    return (
+      <div className="flex flex-col gap-6 text-center">
+        <h1 className="text-2xl font-bold">Check your email</h1>
+        <p className="text-muted-foreground">
+          We've sent a verification link to{' '}
+          <strong>{form.getValues('email')}</strong>. Please click the link to
+          activate your account.
+        </p>
+      </div>
+    );
+  }
+
+  // Otherwise, render the form as before
   return (
     <Form {...form}>
       <form
