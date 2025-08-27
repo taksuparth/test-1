@@ -1,10 +1,7 @@
-import { checkAuthentication } from '~/utils/checkAuthentication';
-import { Outlet, type LoaderFunctionArgs } from 'react-router';
+import { authCheckLoader } from '~/utils/authCheckLoader';
+import { Outlet } from 'react-router';
 
-export async function loader({ request }: LoaderFunctionArgs) {
-  const { user } = await checkAuthentication({ request });
-  return { user };
-}
+export { authCheckLoader as Loader };
 
 export default function BaseAuthRoute() {
   return <Outlet />;

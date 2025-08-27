@@ -1,12 +1,16 @@
 import { useCallback } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useGoogleSignIn } from '~/hooks/useGoogleSignIn';
+import { dehydrate, useMutation } from '@tanstack/react-query';
+import { useGoogleSignIn } from '~/modules/authentication/hooks/useGoogleSignIn';
+import { authPageLoader } from '~/utils/authCheckLoader';
 import { isAuthenticated } from '~/utils/checkAuthentication';
-import { fetchWithCSRF } from '~/utils/fetchWithCSRF';
+import { Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import type { LoaderFunction } from 'react-router';
 import { Link, redirect, useNavigate } from 'react-router';
 import { z } from 'zod';
+import { axiosClient } from '@/lib/axios';
+import { createQueryClient } from '@/lib/query-client';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -25,13 +29,7 @@ const loginSchema = z.object({
   password: z.string().min(2, 'Password must be at least 8 characters'),
 });
 
-export const loader: LoaderFunction = async ({ request }) => {
-  const isUserAuthenticated = await isAuthenticated({ request });
-  if (isUserAuthenticated) {
-    return redirect('/dashboard');
-  }
-  return {};
-};
+export { authPageLoader as loader };
 
 export default function LoginForm() {
   const navigate = useNavigate();
@@ -45,8 +43,16 @@ export default function LoginForm() {
     },
   });
 
-  const onSubmit = useCallback(
-    async ({ email, password }: { email: string; password: string }) => {
+  const { mutate: login, isPending: isLoading } = useMutation({
+    mutationKey: ['currentUser'],
+    mutationFn: async (data: { email: string; password: string }) => {
+      const response = await axiosClient.post('/api/auth/login', {
+        email: data.email,
+        password: data.password,
+      });
+      return response.data;
+    },
+    onError: (error: any) => {
       const setRootError = (errorMessage: string) => {
         form.setError('email', {});
         form.setError('password', {
@@ -54,26 +60,21 @@ export default function LoginForm() {
         });
       };
 
-      try {
-        const response = await fetchWithCSRF('/api/auth/login', {
-          method: 'POST',
-          body: JSON.stringify({ email, password }),
-        });
-        const res = await response.json();
-        if (res.error) {
-          setRootError(res?.statusMessage ?? 'Incorrect email or passowrd');
-          return;
-        }
-        navigate('/dashboard');
-      } catch (e) {
-        console.error(e);
-        setRootError(e?.message ?? 'Incorrect email or passowrd');
-      }
+      setRootError(error?.message ?? 'Incorrect email or password');
     },
-    [navigate],
-  );
+    onSuccess: () => {
+      navigate('/dashboard');
+    },
+  });
 
   const { handleGoogleLogin } = useGoogleSignIn();
+
+  const onSubmit = useCallback(
+    (data: Inputs) => {
+      login(data);
+    },
+    [login],
+  );
 
   return (
     <Form {...form}>
@@ -92,6 +93,7 @@ export default function LoginForm() {
           <FormField
             control={form.control}
             name="email"
+            disabled={isLoading}
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Email</FormLabel>
@@ -106,16 +108,17 @@ export default function LoginForm() {
           <FormField
             control={form.control}
             name="password"
+            disabled={isLoading}
             render={({ field }) => (
               <FormItem>
                 <div className="flex items-center">
                   <FormLabel>Password</FormLabel>
-                  <a
-                    href="#"
+                  <Link
+                    to={`/forgot-password?email=${form.getValues('email')}`}
                     className="ml-auto text-sm underline-offset-4 hover:underline"
                   >
                     Forgot your password?
-                  </a>
+                  </Link>
                 </div>
                 <FormControl>
                   <Input type="password" {...field} />
@@ -129,8 +132,8 @@ export default function LoginForm() {
             <span className="">{form.formState.errors.root.message}</span>
           ) : null}
 
-          <Button type="submit" className="w-full">
-            Login
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Login'}
           </Button>
 
           <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">

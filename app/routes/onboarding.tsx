@@ -1,9 +1,9 @@
 import { AuthLayout } from '~/components/layout/AuthLayout';
 import { useCreateEventMutation } from '~/modules/event/hooks/useCreateEventMutation';
-import { checkAuthentication } from '~/utils/checkAuthentication';
+import { authCheckLoader } from '~/utils/authCheckLoader';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
-import type { LoaderFunctionArgs, MetaFunction } from 'react-router';
+import type { MetaFunction } from 'react-router';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -21,22 +21,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 export const meta: MetaFunction = () => {
   return [{ title: 'Create Your First Event | Planeasy' }];
 };
 
-export async function loader({ request }: LoaderFunctionArgs) {
-  const { user } = await checkAuthentication({ request });
-  return { user };
-}
+export { authCheckLoader as Loader };
 
 export default function OnboardingCreateEventPage() {
   const { form, onSubmit, loading } = useCreateEventMutation();
